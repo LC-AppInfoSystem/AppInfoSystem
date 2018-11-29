@@ -3,7 +3,6 @@
 <%@include file="common/header.jsp"%>
 <div class="clearfix"></div>
 <div class="row">
-
 	<div class="col-md-12">
 		<div class="x_panel">
 			<div class="x_title">
@@ -14,14 +13,14 @@
 				<div class="clearfix"></div>
 			</div>
 			<div class="x_content">
-				<form method="post" action="list">
+				<form method="post" action="${pageContext.request.contextPath }/backend/applist">
 					<input type="hidden" name="pageIndex" value="1" />
 			    <ul>
 					<li>
 						<div class="form-group">
 							<label class="control-label col-md-3 col-sm-3 col-xs-12">软件名称</label>
 							<div class="col-md-6 col-sm-6 col-xs-12">
-								<input name="querySoftwareName" type="text" class="form-control col-md-7 col-xs-12" value="${querySoftwareName }">
+								<input name=softwareName type="text" class="form-control col-md-7 col-xs-12" value="${softwareName }">
 							</div>
 						</div>
 					</li>

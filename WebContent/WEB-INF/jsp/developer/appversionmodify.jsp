@@ -150,5 +150,8 @@
     </div>
   </div>
 </div>
+<script type="text/javascript">
+  var path="${pageContext.request.contextPath }"
+</script>
 <%@include file="common/footer.jsp"%>
 <script src="${pageContext.request.contextPath }/statics/localjs/appversionmodify.js"></script>
