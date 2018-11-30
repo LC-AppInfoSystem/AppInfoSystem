@@ -26,14 +26,14 @@ public class SysInterceptor extends HandlerInterceptorAdapter {
 	   DevUser user=(DevUser)session.getAttribute("devUserSession");
 	   //后台
 	   BackendUser backendUser=(BackendUser)session.getAttribute("userSession");
-	   if (null==user) {
-		   response.sendRedirect(request.getContextPath()+"/403.jsp");
-		   return false;
+	   if (null!=user) {
+		   return true;
 	   }
-	   if (null==backendUser) {
-		   response.sendRedirect(request.getContextPath()+"/403.jsp");
-		   return false;
+	   else if (null!=backendUser) {
+		   return true;
 	   }
-	return true;
+	   response.sendRedirect(request.getContextPath()+"/403.jsp");
+	   return false;
+	
 }
 }

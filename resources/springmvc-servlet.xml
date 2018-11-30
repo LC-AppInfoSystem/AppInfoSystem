@@ -65,7 +65,7 @@
 	<!-- 配置interceptors -->
 	<mvc:interceptors>
 		<mvc:interceptor>
-			 <mvc:mapping path="/sysh/**"/> 
+			 <mvc:mapping path="/sys/**"/> 
 			 <mvc:exclude-mapping path="/dologin"/>
 			 <mvc:exclude-mapping path="/backendlogin"/>
 			<bean class="cn.appsys.interceptor.SysInterceptor"/>

@@ -148,46 +148,51 @@ public class DeveloperController {
      * 进行添加基础信息并跳转到App前台管理的App审核列表
      */
     @RequestMapping("/appinfoaddsave")
-    public String AppInfoInsertSave(AppInfo appInfo,
-    		                        HttpSession session,
-    		                        HttpServletRequest request,
-    		                        @RequestParam(value="a_logoPicPath",required=false)MultipartFile attach) {
-	  String logoPicPath = null;
-	   //判断文件是否为空
-	  if(!attach.isEmpty()) {
-		String path = request.getSession().getServletContext().getRealPath("statics" + java.io.File.separator + "uploadfiles");
-		String oldFileName=attach.getOriginalFilename();  //原文件名
-		String prefix=FilenameUtils.getExtension(oldFileName);  //原文件后缀
-		int filesize = 524288000;
-		if(attach.getSize() > filesize) { //上传文件大小不得超过500kB
-			request.setAttribute("fileUploadError", "* 上传文件大小不得超过500MB");
-			return "";
-		}else if(prefix.equalsIgnoreCase("jpg")){
-			String fileName = System.currentTimeMillis() + RandomUtils.nextInt(1000000) + "_Personal.apk";
-			File targetFile = new File(path, fileName);
-			if(!targetFile.exists()) {
-				targetFile.mkdirs();
+    public String InsertAPPInfo(AppInfo appInfo,HttpSession session,HttpServletRequest request,
+			@RequestParam(value="a_logoPicPath",required=false) MultipartFile attact) {
+		String logoPicPath=null;
+		String logoLocPath=null;
+		if (!attact.isEmpty()) {
+			String path=request.getSession().getServletContext().getRealPath("statics"+File.separator+"uploadfiles");
+			String oldFileName=attact.getOriginalFilename();//原文件名
+			String prefix=FilenameUtils.getExtension(oldFileName);//原文件后缀
+			int filesize=500000;
+			if (attact.getSize()>filesize) {
+				return "developer/appinfoadd";
+			} else if (prefix.equalsIgnoreCase("jpg")
+					||prefix.equalsIgnoreCase("png")
+					||prefix.equalsIgnoreCase("jpeg")
+					||prefix.equalsIgnoreCase("pneg")
+					||prefix.equalsIgnoreCase("apk")) {
+				appInfo.setLogoLocPath(oldFileName);
+				String fileName = appInfo.getLogoLocPath();
+				File targetFile=new File(path,fileName);
+				if (!targetFile.exists()) {
+					targetFile.mkdirs();
+				}
+				try {
+					System.out.println(targetFile);
+					attact.transferTo(targetFile);
+				} catch (Exception e) {
+					e.printStackTrace();
+					return "developer/appinfoadd";
+				}
+				 logoPicPath = request.getContextPath()+"/statics/uploadfiles/"+fileName;
+				 logoLocPath = path+File.separator+fileName;
 			}
-			try {
-				attach.transferTo(targetFile);
-			} catch (Exception e) {
-				e.printStackTrace();
-				request.setAttribute("fileUploadError", "上传失败！");
-				return "/developer/appinfoadd";
-			}
-			logoPicPath=path+File.separator+fileName;
-		}else {
-			request.setAttribute("fileUploadError", "*上传格式不正确");
-			return "/developer/appinfoadd";
+		} else {
+			return "developer/appinfoadd";
 		}
-	}
-	appInfo.setCreatedBy(((DevUser)session.getAttribute("devUserSession")).getId());
-	appInfo.setCreationDate(new Date());
-	appInfo.setLogoPicPath(logoPicPath);
-	if (developerservice.InsertAppInfo(appInfo)) {
-		return "redirect:/developer/applist";
-	}
-	return "/developer/appinfoadd";
+		appInfo.setCreatedBy(((DevUser)session.getAttribute("devUserSession")).getId());
+		appInfo.setCreationDate(new Date());
+		appInfo.setLogoPicPath(logoPicPath);
+		appInfo.setLogoLocPath(logoLocPath);
+		appInfo.setDevId(((DevUser)session.getAttribute("devUserSession")).getId());
+		appInfo.setStatus(1);
+		if (developerservice.InsertAppInfo(appInfo)) {
+			return "redirect:/developer/applist";
+		}
+		return "redirect:/developer/appinfoadd";
     }
     /**
      * 删除APP列表
@@ -302,7 +307,7 @@ public class DeveloperController {
  		return "/developer/appversionadd";
     }
     /**
-     * 新增APP基础信息并跳转到APP后台列表
+     * 新增APP版本界面并跳转到APP后台列表
      */
     @RequestMapping("/addversionsave")
     public String  InsertAppVersionSave(AppVersion appversion,HttpSession session,HttpServletRequest request,
@@ -312,9 +317,9 @@ public class DeveloperController {
 			String path=request.getSession().getServletContext().getRealPath("statics"+File.separator+"uploadfiles");
 			String oldFileName=attact.getOriginalFilename();//原文件名
 			String prefix=FilenameUtils.getExtension(oldFileName);//原文件后缀
-			if (prefix.equalsIgnoreCase("jpg")) {
+			if (prefix.equalsIgnoreCase("apk")) {
 				appversion.setApkFileName(oldFileName);
-				String fileName = appversion.getApkFileName() + ".jpg";
+				String fileName = appversion.getApkFileName() + ".apk";
 				File targetFile=new File(path,fileName);
 				if (!targetFile.exists()) {
 					targetFile.mkdirs();
@@ -323,14 +328,13 @@ public class DeveloperController {
 					attact.transferTo(targetFile);
 				} catch (Exception e) {
 					e.printStackTrace();
-					System.out.println("第二个错误");
 					return "developer/appversionadd";
 				}
 				apkFileName =fileName;
 				apkLocPath = path+File.separator+fileName;
 			}
+		appversion.setCreatedBy(((DevUser)session.getAttribute("devUserSession")).getId());
 		appversion.setCreationDate(new Date());
-		appversion.setModifyDate(new Date());
 		appversion.setApkFileName(apkFileName);
 		appversion.setApkLocPath(apkLocPath);
 		appversion.setDownloadLink(request.getContextPath()+"/statics/uploadfiles/"+appversion.getApkFileName());
@@ -351,24 +355,58 @@ public class DeveloperController {
  		model.addAttribute("appVersionList",appVersionList);	//查询历史版本传到页面上面
  		return "/developer/appversionmodify";
 	}
+    /**
+     * 进行修改APP最新版本信息
+     * @param id
+     */
     @RequestMapping("/appversionmodifysave")
-	public String getupdates(@RequestParam(value="id",required=false) Integer id,
-							@RequestParam(value="versionSize",required=false) String versionSize,
-							@RequestParam(value="versionInfo",required=false) String versionInfo) {
-    	System.out.println("进行修改APP最新版本信息==============");
-		BigDecimal bigDecimal = new BigDecimal(versionSize);
-		AppVersion appVersion = new AppVersion();
-		appVersion.setId(id);
-		appVersion.setVersionSize(bigDecimal);
-		appVersion.setModifyDate(new Date());
-		appVersion.setVersionInfo(versionInfo);
-		int count = developerservice.getupdate(appVersion);
-		if(count > 0) {
-			return "redirect:/developer/applist";
-		}else {
-			return "redirect:/developer/appversionmodify";
+	public String modifys(AppVersion appVersion,HttpSession session,
+			@RequestParam(value="appId",required=false)Integer appId,
+			@RequestParam(value="attach",required= false) MultipartFile attach,
+			HttpServletRequest request){
+		String downloadLink =  null;
+		String apkLocPath = null;
+		String apkFileName = null;
+		System.out.println("attach"+attach.getOriginalFilename());
+		
+			String path = request.getSession().getServletContext().getRealPath("statics"+java.io.File.separator+"uploadfiles");
+			String oldFileName = attach.getOriginalFilename();//原文件名
+			String prefix = FilenameUtils.getExtension(oldFileName);//原文件后缀
+			 if(prefix.equalsIgnoreCase("apk") ){//上传格式
+				 appVersion.setApkFileName(oldFileName);
+				 String fileName = appVersion.getApkFileName();//上传LOGO图片命名:apk名称.apk
+				 File targetFile = new File(path,fileName);
+				 if(!targetFile.exists()){
+					 targetFile.mkdirs();
+				 }
+				 try {
+					attach.transferTo(targetFile);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					request.setAttribute("fileUploadError", "*上传失败");
+					return "developer/appversionadd";
+				} 
+				 apkFileName = fileName + "-" +appVersion.getVersionNo() + ".apk";
+				 //apkFileName = request.getContextPath()+"/statics/uploadfiles/"+fileName;
+				 downloadLink = request.getContextPath()+"/statics/uploadfiles/"+appVersion.getApkFileName();
+				 apkLocPath = path+File.separator+fileName;
+				 System.out.println("apkLocPath"+apkLocPath);
+				 System.out.println("downloadLink"+downloadLink);
+				 System.out.println("apkFileName"+apkFileName);
+			
 		}
+		appVersion.setModifyDate(new Date());
+		appVersion.setModifyBy(((DevUser)session.getAttribute("devUserSession")).getId());
+		appVersion.setDownloadLink(downloadLink);
+		appVersion.setApkLocPath(apkLocPath);
+		int count = developerservice.getupdate(appVersion);
+		if(count>0) {
+			return "redirect:/developer/applist";
+		}
+		return "redirect:/developer/appversionmodify";
 	}
+			
     @RequestMapping("/appinfomodify/{appinfoid}")
 	public String getUpdateAppinfo(@PathVariable Integer appinfoid,Model model) {
 		AppInfo appInfo = developerservice.SelectAppInfoID(appinfoid);
@@ -395,16 +433,57 @@ public class DeveloperController {
 		}
     	return JSONArray.toJSONString(reHashMap);
 	}
+    /**
+     * 修改界面
+     * @param appInfo
+     * @param session
+     * @return
+     */
     @RequestMapping(value="/appinfomodifysave")
-	public String getappinfoupdate(AppInfo appInfo) {
+    public String getappinfoupdate(AppInfo appInfo,HttpServletRequest request,
+			Model model,@RequestParam(value="attach",required= false) MultipartFile attach) {
+		String logoPicPath = null;
+		String logoLocPath = null;
+		if(!attach.isEmpty()){
+			String path = request.getSession().getServletContext().getRealPath("statics"+java.io.File.separator+"uploadfiles");
+			String oldFileName = attach.getOriginalFilename();//原文件名
+			String prefix = FilenameUtils.getExtension(oldFileName);//原文件后缀
+			int filesize = 5000000;
+			if(attach.getSize() > filesize){//上传大小不得超过 50k
+				request.setAttribute("fileUploadError", "*上传大小不得超过500kB");
+				return "developer/appinfomodifysave";
+            }else if(prefix.equalsIgnoreCase("jpg") || prefix.equalsIgnoreCase("png") 
+			   ||prefix.equalsIgnoreCase("jepg") || prefix.equalsIgnoreCase("pneg")){//上传图片格式
+				 String fileName = appInfo.getAPKName() + ".jpg";//上传LOGO图片命名:apk名称.apk
+				 File targetFile = new File(path,fileName);
+				 if(!targetFile.exists()){
+					 targetFile.mkdirs();
+				 }
+				 try {
+					attach.transferTo(targetFile);
+				} catch (Exception e) {
+					e.printStackTrace();
+					request.setAttribute("fileUploadError", "*上传失败");
+					return "developer/appinfomodifysave";
+				} 
+				 logoPicPath = request.getContextPath()+"/statics/uploadfiles/"+fileName;
+				 logoLocPath = path+File.separator+fileName;
+				 appInfo.setLogoPicPath(logoPicPath);
+				 appInfo.setLogoLocPath(logoLocPath);
+				 developerservice.getappinfoupdate(appInfo);
+			}else{
+				request.setAttribute("fileUploadError", "");
+				return "redirect:/developer/appinfomodifysave";
+			}
+		}
 		int count = developerservice.getappinfoupdate(appInfo);
 		if(count > 0) {
 			return "redirect:/developer/applist";
 		}
-		return "redirect:/developer/appinfomodify";
+		return "redirect:/developer/appinfomodifysave";
 	}
-}
 
+}
 
 
 
